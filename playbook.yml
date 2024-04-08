@@ -1,0 +1,44 @@
+- name: Role base
+  hosts: all
+  roles:
+    - base
+
+- name: Role Redis
+  hosts: redis
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - redis
+
+- name: Role PostrgreSQL
+  hosts: postgresql
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - postgresql
+
+- name: Role Poll
+  hosts: poll
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - poll
+
+- name: Role worker
+  hosts: worker
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - worker
+
+- name: Role result
+  hosts: result
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - result
+

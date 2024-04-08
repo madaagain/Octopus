@@ -1,0 +1,35 @@
+- name: Install Redis
+  become: true
+  apt:
+    name: redis-server
+    state: present
+
+- name: Create Redis Directory for Data
+  become: true
+  register: dir_redis
+  file:
+    path: "{{ redis_dir }}"
+    state: directory
+  
+- name: Action to Configure Redis
+  become: true
+  register: conf_redis
+  template:
+    src: ../files/redis.conf
+    dest: /etc/redis/redis.conf
+
+- name: Action to Restart Redis if needed
+  become: true
+  when: conf_redis.changed
+  systemd: 
+    name: redis-server
+    state: restarted
+
+- name: ufw rules
+  become: true
+  community.general.ufw:
+    rule: "allow"
+    port: "{{ item }}"
+    proto: "tcp"
+  with_items:
+    - "6379"

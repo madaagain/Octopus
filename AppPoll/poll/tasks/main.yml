@@ -1,0 +1,38 @@
+---
+- name: unarchive poll.tar
+  become: true
+  unarchive:
+    src: ../../../poll.tar
+    dest: /opt/
+
+- name: upload .service
+  become: true
+  register: service
+  template:
+    src: ../files/poll.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install dependance
+  become: true
+  pip:
+    requirements: /opt/poll/requirements.txt    
+
+- name: start service
+  when: service.changed
+  become: true
+  systemd:
+    name: poll
+    state: restarted
+    enabled: yes
+
+- name: ufw rules
+  become: true
+  community.general.ufw:
+    rule: "allow"
+    port: "{{ item }}"
+    proto: "tcp"
+  with_items:
+    - "80"

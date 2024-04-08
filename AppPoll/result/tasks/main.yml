@@ -1,0 +1,45 @@
+- name: Unarchive result.tar
+  become: true
+  ansible.builtin.unarchive:
+    src: ../../../result.tar
+    dest: /opt/
+
+- name: Upload .service
+  become: true
+  register: service
+  vars:
+    port: "{{ result_port }}"
+  template:
+    src: ../files/result.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Action to Install Node and Npm
+  ansible.builtin.apt:
+    pkg: 
+      - nodejs
+      - npm
+    state: present
+    
+- name: Action to Install dependances
+  npm:
+    path: /opt/result/
+
+- name: Action to Start and run service
+  become: true
+  when: service.changed
+  systemd:
+    name: result
+    state: restarted
+    enabled: yes
+
+- name: ufw rules
+  become: true
+  community.general.ufw:
+    rule: "allow"
+    port: "{{ item }}"
+    proto: "tcp"
+  with_items:
+    - "80"

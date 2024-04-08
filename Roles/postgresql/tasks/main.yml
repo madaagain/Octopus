@@ -1,0 +1,97 @@
+- name: set the APT key
+  become: yes
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: set the repo APT
+  apt_repository:
+    repo: deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main
+    state: present
+
+- name: Install PostgreSQL 12 and psql tool
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - postgresql-12
+      - postgresql-client-12
+      - postgresql-contrib-12
+      - libpq-dev
+      - acl
+
+- name: Install the psycopg2 using pip
+  become: yes
+  pip:
+    name: psycopg2-binary
+    state: present
+
+- name: Copy the postgresql.conf in the VM
+  register: conf
+  copy:
+    src: ../files/postgresql.conf
+    dest: /etc/postgresql/12/main/postgresql.conf
+
+- name: Using template pg_hba.conf
+  become: true
+  register: template
+  template:
+    src: ../files/pg_hba.conf
+    dest: /etc/postgresql/12/main/pg_hba.conf
+
+- name: If needed Restart postgre
+  become: true
+  when: template.changed or conf.changed
+  systemd: 
+    name: postgresql
+    state: restarted
+
+- name: Create PostgreSQL database from the scheme
+  become: true
+  become_user: postgres
+  postgresql_db:
+    name: "{{ postgresql_db }}"
+    state: present
+
+- name: Copy scheme files
+  register: schema
+  copy:
+    src: ../files/schema.sql
+    dest: /tmp/schema.sql
+
+- name: Run the SQL schema
+  become: true
+  when: schema.changed
+  postgresql_query:
+    db: "{{ postgresql_db }}"
+    query: "{{ lookup('file', '../files/schema.sql') }}"
+
+- name: Apply Roles
+  become: true
+  become_user: postgres
+  postgresql_user:
+    db: "{{ postgresql_db }}"
+    name: "{{ postgresql_user }}" 
+    password: "{{ postgresql_pass }}" 
+    role_attr_flags: LOGIN,NOSUPERUSER,NOCREATEDB,NOCREATEROLE
+    encrypted: yes
+    state: present
+
+- name: Grant private to database library
+  community.postgresql.postgresql_privs:
+    database: "{{ postgresql_db }}"
+    state: present
+    privs: SELECT,INSERT,UPDATE,DELETE
+    type: table
+    obj: votes
+    roles: "{{ postgresql_user }}"
+    grant_option: true
+
+- name: ufw rules
+  become: true
+  community.general.ufw:
+    rule: "allow"
+    port: "{{ item }}"
+    proto: "tcp"
+  with_items:
+    - "5432"
+    - "5433"

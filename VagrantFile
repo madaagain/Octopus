@@ -1,0 +1,31 @@
+Vagrant.configure("2") do |config|
+    config.vm.define "worker" do |worker|
+        worker.vm.box = "debian/buster64"
+        worker.vm.network "private_network", ip: "192.168.56.19"
+    end
+  
+    config.vm.define "poll" do |poll|
+        poll.vm.box = "debian/buster64"
+        poll.vm.network "private_network", ip: "192.168.56.12"
+    end
+    
+    config.vm.define "base" do |base|
+        base.vm.box = "debian/buster64"
+        base.vm.network "private_network", ip: "192.168.56.13"
+    end
+
+    config.vm.define "postgresql" do |postgresql|
+        postgresql.vm.box = "debian/buster64"
+        postgresql.vm.network "private_network", ip: "192.168.56.14"
+    end
+
+    config.vm.define "redis" do |redis|
+        redis.vm.box = "debian/buster64"
+        redis.vm.network "private_network", ip: "192.168.56.15"
+    end
+
+    config.vm.define "result" do |result|
+        result.vm.box = "debian/buster64"
+        result.vm.network "private_network", ip: "192.168.56.16"
+    end
+end
